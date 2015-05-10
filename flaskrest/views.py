@@ -2,49 +2,40 @@ from flask import  jsonify, abort, request
 from flaskrest import app
 
 from flaskrest.database import db
-from flaskrest.models import User
+from flaskrest.models import User, Mach
 
 from sqlalchemy import exc
 
-tasks = [
-    {
-        'id': 1,
-        'title': u'do something',
-        'description': u' some stuff', 
-        'done': False
-    },
-    {
-        'id': 2,
-        'title': u'do somethng else',
-        'description': u'Some more stuff', 
-        'done': False
-    }
-]
-
-
-@app.route('/awesome')
-def awesome():
-  u = User('admin', 'admin@localhost')
-  try:
-    db.session.add(u)
-    db.session.commit()
-  except exc.IntegrityError as ex:
-    print ex.__class__
-    return  jsonify('{\'message \': \'data not added - it was already added\'')
-  return  jsonify('{\'message \': \'data  added\'')
-
+def unimplemented(thing={'message': 'unimplemented' }):
+  response = jsonify(thing)
+  response.status_code = 501
+  return response
 
 
 @app.route('/api/v0.1/mach/<int:_id>', methods=['GET'])
-def get_task(_id):
-  task = [task for task in tasks if task['id'] == _id]
-  if len(task) == 0:
-    abort(404)
-  return jsonify({'task': task[0]})
+def get_mach(_id):
+    m = Mach.query.get_or_404(_id)
+    return jsonify(m.to_json())
+  
+@app.route('/api/v0.1/mach/', methods=['GET'])
+def get_machs():
+  thing = jsonify({'urls':[m.get_url() for m in Mach.query.all()]})
+  print str(thing)
+  return thing
 
+'''
+http://127.0.0.1:5000/api/v0.1/mach/
 
+{
+  'name': 'test_name',
+  'disk_size' : 64,
+  'num_nodes' : 6
+}
+'''
 @app.route('/api/v0.1/mach/', methods=['POST'])
-def new_task():
-  print str(request.data)
-  #cTODO reate a new mach
-  return jsonify({'message': 'success' })
+def new_mach():
+  print request.json
+  m = Mach().from_json(request.json)
+  db.session.add(m)
+  db.session.commit()
+  return unimplemented()
